@@ -4,40 +4,59 @@ const fetch = require("node-fetch");
 const app = express();
 
 app.get("/company-check", async (req, res) => {
-  const cui = (req.query.cui || "").replace(/RO/gi, "").replace(/\D/g, "");
+  const cui = (req.query.cui || "")
+    .replace(/RO/gi, "")
+    .replace(/\D/g, "");
 
-  if (!cui) return res.json({ valid: false });
+  if (!cui) {
+    return res.json({
+      valid: false,
+      error: "missing_cui"
+    });
+  }
 
   try {
-    const response = await fetch(`https://www.firmeapi.ro/api/v1/firma/${cui}`, {
-      method: "GET",
-      headers: {
-        "Authorization": `Bearer ${process.env.API_KEY}`,
-        "Accept": "application/json"
+    const response = await fetch(
+      `https://www.firmeapi.ro/api/free/firma/${cui}`,
+      {
+        method: "GET",
+        headers: {
+          "X-Api-Key": process.env.API_KEY,
+          "Accept": "application/json"
+        }
       }
-    });
+    );
 
     const result = await response.json();
 
-    if (!result || !result.data) {
-      return res.json({ valid: false, raw: result });
+    if (!response.ok || !result || !result.data) {
+      return res.json({
+        valid: false,
+        raw: result
+      });
     }
 
     const firma = result.data;
 
-    res.json({
+    return res.json({
       valid: true,
       company_name: firma.denumire || "",
       cui: firma.cui || cui,
       address: firma.adresa_completa || "",
-      city: firma.adresa_sediu_social?.localitate || "",
-      county: firma.adresa_sediu_social?.judet || "",
-      postal_code: firma.adresa_sediu_social?.cod_postal || ""
+      city: firma.adresa_sediu_social?.localitate || firma.localitate || "",
+      county: firma.adresa_sediu_social?.judet || firma.judet || "",
+      postal_code: firma.adresa_sediu_social?.cod_postal || firma.cod_postal || "",
+      status: firma.stare || ""
     });
 
   } catch (e) {
-    res.json({ valid: false, error: e.message });
+    return res.json({
+      valid: false,
+      error: e.message
+    });
   }
 });
 
-app.listen(process.env.PORT || 3000, () => console.log("Server running"));
+app.listen(process.env.PORT || 3000, () => {
+  console.log("Server running");
+});
