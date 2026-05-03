@@ -10,18 +10,20 @@ app.get("/company-check", async (req, res) => {
 
   try {
     const response = await fetch(`https://www.firmeapi.ro/api/v1/firma/${cui}`, {
+      method: "GET",
       headers: {
-        Authorization: `Bearer ${process.env.API_KEY}`,
-        Accept: "application/json"
+        "Authorization": `Bearer ${process.env.API_KEY}`,
+        "Accept": "application/json"
       }
     });
 
     const result = await response.json();
-    const firma = result.data;
 
-    if (!response.ok || !result.success || !firma) {
+    if (!result || !result.data) {
       return res.json({ valid: false, raw: result });
     }
+
+    const firma = result.data;
 
     res.json({
       valid: true,
