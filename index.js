@@ -6,37 +6,31 @@ const app = express();
 app.get("/company-check", async (req, res) => {
   const cui = (req.query.cui || "").replace(/RO/gi, "").replace(/\D/g, "");
 
-  if (!cui) {
-    return res.json({ valid: false, error: "missing_cui" });
-  }
+  if (!cui) return res.json({ valid: false });
 
   try {
-    const response = await fetch(
-      `https://api.firmenoi.ro/api/v1/companies/search?cui=${encodeURIComponent(cui)}`,
-      {
-        headers: {
-          "X-API-Key": process.env.API_KEY,
-          "Authorization": `Bearer ${process.env.API_KEY}`
-        }
+    const response = await fetch(`https://www.firmeapi.ro/api/v1/firma/${cui}`, {
+      headers: {
+        Authorization: `Bearer ${process.env.API_KEY}`,
+        Accept: "application/json"
       }
-    );
+    });
 
-    const data = await response.json();
+    const result = await response.json();
+    const firma = result.data;
 
-    const firma = data.firma || data.company || data.data || data;
-
-    if (!response.ok || !firma || (!firma.denumire && !firma.name)) {
-      return res.json({ valid: false, status: response.status, raw: data });
+    if (!response.ok || !result.success || !firma) {
+      return res.json({ valid: false, raw: result });
     }
 
     res.json({
       valid: true,
-      company_name: firma.denumire || firma.name || "",
+      company_name: firma.denumire || "",
       cui: firma.cui || cui,
-      address: firma.adresa || firma.address || "",
-      city: firma.localitate || firma.city || "",
-      county: firma.judet || firma.county || "",
-      postal_code: firma.cod_postal || firma.postal_code || ""
+      address: firma.adresa_completa || "",
+      city: firma.adresa_sediu_social?.localitate || "",
+      county: firma.adresa_sediu_social?.judet || "",
+      postal_code: firma.adresa_sediu_social?.cod_postal || ""
     });
 
   } catch (e) {
